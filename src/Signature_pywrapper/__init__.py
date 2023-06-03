@@ -4,4 +4,4 @@
 
 from .signature_wrapper import Signature
 
-__version__ = "0.0.0-dev0"
+__version__ = "0.0.1"

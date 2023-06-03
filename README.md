@@ -23,7 +23,7 @@ From source:
 with pip:
 
 ```bash
-pip install signature-pywrapper
+pip install Signature-pywrapper
 ```
 
 ### Get started
@@ -47,6 +47,10 @@ sig = Signature()
 print(sig.calculate(mols, depth=1))
 ```
 
+One can also calculate signatures for multiple depths:
+```python
+print(sig.calculate(mols, depth=[1, 2, 3]))
+```
 ## Documentation
 
 ```python
@@ -59,7 +63,7 @@ Parameters:
 
 - ***mols  : Iterable[Chem.Mol]***  
   RDKit molecule objects for which to obtain Signature descriptors.
-- ***depth  : Iterable[Chem.Mol]***  
+- ***depth  : Union[int, List[int]]***  
   Depth of the signatures of vertices.
 - ***show_banner  : bool***  
   Displays default notice about Signature descriptors.

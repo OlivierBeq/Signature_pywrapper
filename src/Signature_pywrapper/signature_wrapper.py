@@ -11,7 +11,7 @@ import warnings
 from collections import Counter
 from copy import deepcopy
 from subprocess import PIPE, Popen
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Union
 
 import more_itertools
 import numpy as np
@@ -43,7 +43,7 @@ class Signature:
         if not os.path.isfile(self._jarfile):
             raise IOError('The required JAR file is not present. Reinstall Signature_pywrapper.')
 
-    def calculate(self, mols: Iterable[Chem.Mol], depth: int = 3, show_banner: bool = True, njobs: int = 1,
+    def calculate(self, mols: Iterable[Chem.Mol], depth: Union[int, List[int]] = 3, show_banner: bool = True, njobs: int = 1,
                   chunksize: Optional[int] = 1000) -> pd.DataFrame:
         """Calclulate signature descriptors.
 
@@ -56,7 +56,10 @@ class Signature:
         """
         if show_banner:
             self._show_banner()
-        self.depth = depth
+        if not isinstance(depth, list):
+            self.depths = [depth]
+        else:
+            self.depths = depth
         # Parallelize should need be
         if njobs > 1:
             with BoundedProcessPoolExecutor(max_workers=njobs) as worker:
@@ -65,7 +68,7 @@ class Signature:
                            ]
             return pd.concat([future.result()
                               for future in futures]
-                             ).reset_index(drop=True)
+                             ).reset_index(drop=True).fillna(0).astype(int)
         # Single process
         return self._calculate(list(mols))
 
@@ -161,6 +164,7 @@ DOI: 10.1021/ci0341823
             if len(result) > 0:
                 out.append(Counter([line.strip().split('\t')[1] for line in result.split('\n')]))
         values = pd.DataFrame(out)
+        values.index.name = 'index'
         return values
 
     def _calculate(self, mols: List[Chem.Mol]) -> pd.DataFrame:
@@ -170,18 +174,31 @@ DOI: 10.1021/ci0341823
         :param depth: depth of each vertex's signature
         :return: a pandas DataFrame containing signature desciptor values and the path to the temp dir to be removed
         """
-        # Prepare inputs
-        command = self._prepare_command(mols, self.depth)
-        # Run command and obtain results
-        results = self._run_command(command)
+        results = []
+        # Run command for each depth
+        for i, depth in enumerate(self.depths):
+            if i == 0: # Avoid overwriting SD file
+                # Prepare inputs
+                command = self._prepare_command(mols, depth)
+            else:
+                command = command[: command.rfind(' ') + 1] + f'{depth}'
+            # Run command and obtain results
+            results.append(self._run_command(command))
+        # Combine depths
+        if len(results) == 1:
+            results = results[0]
+        else:
+            results = pd.concat(results).groupby(by='index').sum().reset_index(drop=True)
         # Cleanup
         self._cleanup()
         # Insert lines of skipped molecules
         if len(self._skipped):
-            results = pd.DataFrame(np.insert(results.values, self._skipped,
-                                             values=[np.NaN] * len(results.columns),
-                                             axis=0),
-                                   columns=results.columns)
+            results = (pd.DataFrame(np.insert(results.values, self._skipped,
+                                              values=[np.NaN] * len(results.columns),
+                                              axis=0),
+                                    columns=results.columns)
+                       .fillna(0)
+                       .astype(int))
         return results
 
     def _multiproc_calculate(self, mols: List[Chem.Mol]) -> pd.DataFrame:
