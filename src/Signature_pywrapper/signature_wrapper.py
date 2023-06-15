@@ -22,6 +22,7 @@ from rdkit.rdBase import BlockLogs
 
 from .utils import install_java, mktempfile, needsHs
 
+
 class Signature:
     """Wrapper to obtain signature molecular descriptors from
     Gilleain Torrance's re-write of Jean-Loup Faulon's signature
@@ -43,7 +44,8 @@ class Signature:
         if not os.path.isfile(self._jarfile):
             raise IOError('The required JAR file is not present. Reinstall Signature_pywrapper.')
 
-    def calculate(self, mols: Iterable[Chem.Mol], depth: Union[int, List[int]] = 3, show_banner: bool = True, njobs: int = 1,
+    def calculate(self, mols: Iterable[Chem.Mol], depth: Union[int, List[int]] = 3,
+                  show_banner: bool = True, njobs: int = 1,
                   chunksize: Optional[int] = 1000) -> pd.DataFrame:
         """Calclulate signature descriptors.
 
@@ -157,7 +159,7 @@ DOI: 10.1021/ci0341823
         :param command: The command to be run.
         """
         with Popen(command.split(), stdout=PIPE) as process:
-            results = re.split('\r?\n\r?\n', process.stdout.read().decode()) # results per molecule
+            results = re.split('\r?\n\r?\n', process.stdout.read().decode())  # results per molecule
         # Organize results
         out = []
         for result in results:
@@ -172,12 +174,12 @@ DOI: 10.1021/ci0341823
 
         :param mols: RDkit molecules for which PaDEL descriptors should be calculated.
         :param depth: depth of each vertex's signature
-        :return: a pandas DataFrame containing signature desciptor values and the path to the temp dir to be removed
+        :return: a pandas DataFrame containing signature descriptor values and the path to the temp dir to be removed
         """
         results = []
         # Run command for each depth
         for i, depth in enumerate(self.depths):
-            if i == 0: # Avoid overwriting SD file
+            if i == 0:  # Avoid overwriting SD file
                 # Prepare inputs
                 command = self._prepare_command(mols, depth)
             else:
@@ -197,8 +199,11 @@ DOI: 10.1021/ci0341823
                                               values=[np.NaN] * len(results.columns),
                                               axis=0),
                                     columns=results.columns)
-                       .fillna(0)
-                       .astype(int))
+                       )
+        results = (results.apply(lambda x: pd.to_numeric(x, errors='coerce'))
+                          .fillna(0)
+                          .convert_dtypes()
+                   )
         return results
 
     def _multiproc_calculate(self, mols: List[Chem.Mol]) -> pd.DataFrame:
