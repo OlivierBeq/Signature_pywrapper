@@ -106,7 +106,7 @@ DOI: 10.1021/ci0341823
 """)
 
     def _prepare_command(self, mols: List[Chem.Mol], depth: int) -> str:
-        """Create the ePaDEL command to be run to obtain molecular descriptors.
+        """Create the Signature command to be run to obtain molecular descriptors.
 
         :param mols: molecules to obtained molecular descriptors of
         :param depth: the depth of signatures to be computed
@@ -172,7 +172,7 @@ DOI: 10.1021/ci0341823
     def _calculate(self, mols: List[Chem.Mol]) -> pd.DataFrame:
         """Calculate PaDEL descriptors on one process.
 
-        :param mols: RDkit molecules for which PaDEL descriptors should be calculated.
+        :param mols: RDkit molecules for which Signature descriptors should be calculated.
         :param depth: depth of each vertex's signature
         :return: a pandas DataFrame containing signature descriptor values and the path to the temp dir to be removed
         """
